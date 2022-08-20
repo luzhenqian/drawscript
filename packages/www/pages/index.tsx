@@ -63,8 +63,24 @@ const Home: NextPage = () => {
             border: "none",
           }}
           onClick={() => {
+            let canvas: HTMLElement | null = document.getElementById("canvas");
+            if (!canvas) {
+              return;
+            }
+
+            const ctx = (canvas as HTMLCanvasElement).getContext("2d");
+            if (!ctx) {
+              return;
+            }
+            ctx.clearRect(
+              0,
+              0,
+              (canvas as HTMLCanvasElement).width,
+              (canvas as HTMLCanvasElement).height
+            );
             const value = editorRef.current?.getValue();
             const code = compile(value);
+
             eval(code);
           }}
         >
