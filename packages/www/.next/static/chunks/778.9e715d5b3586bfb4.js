@@ -1,0 +1,1 @@
+(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[778],{6778:function(){!function(a){let b=document.getElementById("canvas"),c=b.getContext("2d"),d=()=>{c.beginPath()},e=(...a)=>{a.forEach(([a,b],d)=>{0===d?c.moveTo(a,b):c.lineTo(a,b)})},f=a=>{c.fillStyle=a},g=()=>{c.fill(),c.fillStyle=""};a.__ds__={start:d,rect:e,color:f,end:g}}(window)}}])
