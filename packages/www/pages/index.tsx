@@ -1,10 +1,16 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import styles from "../styles/Home.module.css";
+import dynamic from "next/dynamic";
 import Editor from "@monaco-editor/react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 // @ts-ignore
-import { compile } from "@ds/core";
+import { tokenize, generator } from "@ds/core";
+import SimpleBar from "simplebar-react";
+import "simplebar/dist/simplebar.min.css";
+
+const ReactJson = dynamic(() => import("react-json-view"), {
+  ssr: false,
+});
 
 declare global {
   interface Window {
@@ -16,23 +22,37 @@ const Home: NextPage = () => {
   useEffect(() => {
     // @ts-ignore
     import("@ds/dom");
+    const canvasContainerEl = canvasContainerRef.current;
+    if (canvasContainerEl) {
+      const rects = canvasContainerEl.getClientRects();
+
+      if (rects.length > 0) {
+        const { height, width } = rects[0];
+        setH(height);
+        setW(width);
+      }
+    }
   }, []);
 
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(0);
+  const [h, setH] = useState(0);
+  const [tokens, setTokens] = useState({});
+  const [code, setCode] = useState("");
   const editorRef = useRef<any>(null);
-
+  const defaultCode = `<r(100 100, 100 150, 150 150, 150 100) c(blue)>`;
   function handleEditorDidMount(editor: any, monaco: any) {
     editorRef.current = editor;
-    console.log(monaco);
   }
   return (
-    <div className={styles.container}>
+    <div>
       <Head>
         <title>DrawScript Playground</title>
         <meta name="description" content="DrawScript Playground" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main style={{ display: "flex", height: "100vh", position: "relative" }}>
+      <div style={{ display: "flex", height: "60vh", position: "relative" }}>
         <div style={{ width: "50%", height: "100%" }}>
           <Editor
             height="100%"
@@ -40,57 +60,130 @@ const Home: NextPage = () => {
             // theme="myCoolTheme"
             theme="vs-dark"
             defaultLanguage="drawscript"
-            defaultValue="<r(0 0, 0 40, 40 40, 40 0) c(blue)>"
+            defaultValue={defaultCode}
             onMount={handleEditorDidMount}
           />
         </div>
 
         <button
+          className="button"
           style={{
-            position: "absolute",
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            backgroundColor: "#454856",
-            color: "white",
-            borderRadius: "50%",
-            fontSize: "1rem",
-            textAlign: "center",
-            lineHeight: "50px",
-            cursor: "pointer",
-            height: "50px",
-            width: "50px",
-            border: "none",
+            zIndex: 2,
           }}
           onClick={() => {
-            let canvas: HTMLElement | null = document.getElementById("canvas");
+            let canvas: HTMLCanvasElement | null = document.getElementById(
+              "canvas"
+            ) as HTMLCanvasElement;
             if (!canvas) {
               return;
             }
 
-            const ctx = (canvas as HTMLCanvasElement).getContext("2d");
+            const ctx = canvas.getContext("2d");
             if (!ctx) {
               return;
             }
-            ctx.clearRect(
-              0,
-              0,
-              (canvas as HTMLCanvasElement).width,
-              (canvas as HTMLCanvasElement).height
-            );
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             const value = editorRef.current?.getValue();
-            const code = compile(value);
-
+            const tokens = tokenize(value);
+            const code = generator(tokens);
+            setTokens(tokens);
+            setCode(code);
             eval(code);
           }}
         >
           Run
         </button>
 
-        <div style={{ width: "50%" }}>
-          <canvas id="canvas" />
+        <div
+          className="gradient-border"
+          style={{
+            width: "calc(50% - 12px)",
+            height: "calc(100% - 12px)",
+            margin: "6px",
+            display: "flex",
+            padding: "20px",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          ref={canvasContainerRef}
+        >
+          <canvas id="canvas" width={w - 2} height={h - 2} />
         </div>
-      </main>
+      </div>
+
+      <div
+        style={{
+          height: "40vh",
+          color: "#93a3bc",
+          background: "#18222d",
+          width: "100%",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            display: "inline-block",
+            width: "50%",
+            height: "100%",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              height: "2rem",
+              lineHeight: "2rem",
+              paddingLeft: "1rem",
+            }}
+          >
+            Tokens
+          </div>
+          <SimpleBar
+            style={{
+              marginTop: "2rem",
+              height: "calc(100% - 2rem)",
+              overflowY: "auto",
+            }}
+          >
+            <ReactJson src={tokens} theme="harmonic" />
+          </SimpleBar>
+        </div>
+
+        <div
+          style={{
+            display: "inline-block",
+            maxHeight: "100%",
+            minHeight: "100%",
+            height: "100%",
+            overflowY: "auto",
+            width: "50%",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              height: "2rem",
+              lineHeight: "2rem",
+              paddingLeft: "1rem",
+            }}
+          >
+            Code
+          </div>
+
+          <div
+            style={{
+              marginTop: "2rem",
+              height: "calc(100% - 2rem)",
+              overflowY: "auto",
+            }}
+          >
+            <Editor value={code} theme="vs-dark" language="javascript" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
